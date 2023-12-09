@@ -1,5 +1,5 @@
 {
-  "name": "heapsTiled",
+  "name": "heapsJsonTiled",
   "url" : "https://github.com/cardgdev/heapsJsonTiled",
   "license": "Apache",
   "tags": ["Heaps","Hashlink","Tiled","import"],
