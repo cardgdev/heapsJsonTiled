@@ -1,15 +1,14 @@
 {
   "name": "heapsTiled",
-  "url" : "https://github.com/deepnight/heapsTiled",
+  "url" : "https://github.com/cardgdev/heapsJsonTiled",
   "license": "Apache",
   "tags": ["Heaps","Hashlink","Tiled","import"],
-  "description": "Import Tiled generated maps to Heaps based projects.",
+  "description": "Import Tiled JSON-formatted maps to Heaps based projects. Define mappings between image sources and h2d.Tile resources programmatically, rather than having a hard dependency in the map file. Define entire maps using a single json file -- no need for seperate tileset and tilemap files! A fork of heapsTiled.",
   "version": "0.0.14",
   "classPath": "src/",
   "releasenote": "Haxelib dependencies",
-  "contributors": ["sbenard"],
+  "contributors": ["sbenard", "cgdev"],
   "dependencies": {
-    "heaps":"",
-    "deepnightLibs":""
+    "heaps":""
   }
 }
