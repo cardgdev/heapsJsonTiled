@@ -15,14 +15,14 @@ Very simple example:
                 return Res.my_tileset.toTile();
             }
 			
-			return Res.fallbacktiles.toTile();
+	    return Res.fallbacktiles.toTile();
 			
         });
 
         var wrapper = new h2d.Object();
 
-		// Render map
-		for(l in map.layers){
+	// Render map
+	for(l in map.layers){
             map.renderLayerBitmap(l, wrapper);
         }
 		
