@@ -7,7 +7,7 @@
   "version": "0.0.14",
   "classPath": "src/",
   "releasenote": "Haxelib dependencies",
-  "contributors": ["sbenard", "cgdev"],
+  "contributors": ["cgdev", "sbenard"],
   "dependencies": {
     "heaps":""
   }
