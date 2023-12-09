@@ -8,26 +8,26 @@ Very simple example:
 
 ```haxe
 
-    public function tiledFile2Object(tmxRes:hxd.res.Resource): h2d.Object {
-        var map = new tiled.TMap(tmxRes, (src) -> {
+public function tiledFile2Object(tmxRes:hxd.res.Resource): h2d.Object {
+	var map = new tiled.TMap(tmxRes, (src) -> {
 		
-            if(src.contains("my_tileset.png")){
-                return Res.my_tileset.toTile();
-            }
+	    if(src.contains("my_tileset.png")){
+		return Res.my_tileset.toTile();
+	    }
 			
 	    return Res.fallbacktiles.toTile();
 			
-        });
+	});
 
-        var wrapper = new h2d.Object();
-
+	var wrapper = new h2d.Object();
+	
 	// Render map
 	for(l in map.layers){
-            map.renderLayerBitmap(l, wrapper);
-        }
+	    map.renderLayerBitmap(l, wrapper);
+	}
 		
-        return wrapper;
-    }
+	return wrapper;
+}
 
 
 
