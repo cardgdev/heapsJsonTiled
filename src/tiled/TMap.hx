@@ -1,5 +1,7 @@
 package tiled;
 
+import haxe.DynamicAccess;
+import haxe.Json;
 import tiled.com.*;
 
 @:allow(tiled.com.TObject)
@@ -17,6 +19,8 @@ class TMap {
 
 	public var bgColor : Null<UInt>;
 
+	var source2TileResolver: (String) -> h2d.Tile;
+
 	private function htmlHexToInt(s:String) : Null<UInt> {
 		if( s.indexOf("#") == 0 )
 			return Std.parseInt("0x" + s.substring(1));
@@ -24,85 +28,91 @@ class TMap {
 		return null;
 	}
 
-	public function new(tmxRes:hxd.res.Resource) {
+	public function new(tmxRes:hxd.res.Resource, source2TileResolver: (String) -> h2d.Tile) {
+		this.source2TileResolver = source2TileResolver;
 		var folder = tmxRes.entry.directory;
-		var xml = new haxe.xml.Access( Xml.parse(tmxRes.entry.getText()) );
-		xml = xml.node.map;
 
-		wid = Std.parseInt( xml.att.width );
-		hei = Std.parseInt( xml.att.height );
-		tileWid = Std.parseInt( xml.att.tilewidth );
-		tileHei = Std.parseInt( xml.att.tileheight );
-		bgColor = xml.has.backgroundcolor ? htmlHexToInt(xml.att.backgroundcolor) : null;
+		var json: haxe.DynamicAccess<Dynamic> = Json.parse(tmxRes.entry.getText());
+
+		wid = json.get("width");
+		hei = json.get("height");
+		tileWid = json.get("tilewidth");
+		tileHei = json.get("tileheight");
+		bgColor = json.exists("backgroundcolor") ? htmlHexToInt(json.get("backgroundcolor")) : null;
 
 		// Parse tilesets
-		for(t in xml.nodes.tileset) {
-			var set = readTileset(folder, t.att.source, Std.parseInt( t.att.firstgid ));
+		for(t in (cast json.get("tilesets"): Array<haxe.DynamicAccess<Dynamic>>)) {
+			var set = readTileset(t);
 			tilesets.push(set);
 		}
 
 		// Parse layers
-		for(l in xml.nodes.layer) {
-			var layer = new TLayer( this, Std.string(l.att.name), Std.parseInt(l.att.id), Std.parseInt(l.att.width), Std.parseInt(l.att.height) );
+		for(l in (cast json.get("layers"): Array<haxe.DynamicAccess<Dynamic>>)) {
+			var layer = new TLayer( this, l.get("name"), l.get("id"), l.get("width"), l.get("height") );
 			layers.push(layer);
 
 			// Properties
-			if( l.hasNode.properties )
-				for(p in l.node.properties.nodes.property)
-					layer.setProp(p.att.name, p.att.value);
+			if( l.exists("properties") )
+				for(eachProperty in (cast l.get("properties"): Array<haxe.DynamicAccess<Dynamic>>)){
+					layer.setProp(eachProperty.get("name"), eachProperty.get("value"));
+				}
+
 
 			// Tile IDs
-			var data = l.node.data;
-			switch( data.att.encoding ) {
-				case "csv" :
-					layer.setIds( data.innerHTML.split(",").map( function(id:String) : UInt {
-						var f = Std.parseFloat(id);
-						if( f > 2147483648. ) // dirty fix for Float>UInt casting issue when "bit #32" is set
-							return ( cast (f-2147483648.) : UInt ) | (1<<31);
-						else
-							return ( cast f : UInt );
-					}) );
-
-				case _ : throw "Unsupported layer encoding "+data.att.encoding+" in "+tmxRes.entry.path;
+			if(l.exists("data")){
+				var data = l.get("data");
+				layer.setIds(data);
+	
 			}
+
+			objects.set(l.get("name"), []);
+			
 		}
 
-		// Parse objects
-		for(ol in xml.nodes.objectgroup) {
-			objects.set(ol.att.name, []);
-			for(o in ol.nodes.object) {
-				var e = new TObject(this, Std.parseInt(o.att.x), Std.parseInt(o.att.y));
-				if( o.has.width ) e.wid = Std.parseInt( o.att.width );
-				if( o.has.height ) e.hei = Std.parseInt( o.att.height );
-				if( o.has.name ) e.name = o.att.name;
-				if( o.has.type ) e.type = o.att.type;
-				if( o.has.gid ) {
-					e.tileId = Std.parseInt( o.att.gid );
-					e.y-=e.hei; // fix stupid bottom-left based coordinate
-				}
-				else if( o.hasNode.ellipse ) {
-					e.ellipse = true;
-					if( e.wid==0 ) {
-						// Fix 0-sized ellipses
-						e.x-=tileWid>>1;
-						e.y-=tileHei>>1;
-						e.wid = tileWid;
-						e.hei = tileHei;
+		// Parse layers
+		for(l in (cast json.get("layers"): Array<haxe.DynamicAccess<Dynamic>>)) {
+			if(l.exists("objects")){
+				// Parse objects
+				for(ol in (cast l.get("objects"): Array<haxe.DynamicAccess<Dynamic>>)) {
+					var e = new TObject(this, ol.get("x"), ol.get("y"));
+					if( ol.exists("width") ) e.wid = ol.get("width");
+					if( ol.exists("height") ) e.hei = ol.get("height");
+					if( ol.exists("name") ) e.name = ol.get("name");
+					if( ol.exists("type") ) e.type = ol.get("type");
+					if( ol.exists("gid") ) {
+						e.tileId = ol.get("gid");
+						e.y-=e.hei; // fix stupid bottom-left based coordinate
 					}
-				}
+					else if( ol.get("ellipse") ) {
+						e.ellipse = true;
+						if( e.wid==0 ) {
+							// Fix 0-sized ellipses
+							e.x-=tileWid>>1;
+							e.y-=tileHei>>1;
+							e.wid = tileWid;
+							e.hei = tileHei;
+						}
+					}
 
-				// Properties
-				if( o.hasNode.properties )
-					for(p in o.node.properties.nodes.property)
-						e.setProp(p.att.name, p.att.value);
-				objects.get(ol.att.name).push(e);
+					// Properties
+					if( ol.exists("properties") ){
+						for(p in (cast ol.get("properties"): Array<haxe.DynamicAccess<Dynamic>>)){
+							e.setProp(p.get("name"), p.get("value"));
+						}
+							
+					}
+						
+					objects.get(ol.get("name")).push(e);
+				}
 			}
 		}
+
 
 		// Parse map properties
-		if (xml.hasNode.properties) {
-			for (p in xml.node.properties.nodes.property)
-				setProp(p.att.name, p.att.value);
+		if (json.exists("properties")) {
+			for (p in (cast json.get("properties"): Array<haxe.DynamicAccess<Dynamic>>)) {
+				setProp(p.get("name"), p.get("value"));
+			}
 		}
 	}
 
@@ -204,30 +214,23 @@ class TMap {
 		return null;
 	}
 
-	inline function getTile(tileId:Int) : Null<h2d.Tile> {
+	public inline function getTile(tileId:Int) : Null<h2d.Tile> {
 		var s = getTileSet(tileId);
 		return s!=null ? s.getTile(tileId) : null;
 	}
 
-	function readTileset(folder:String, fileName:String, baseIdx:Int) : TTileset {
-		var folderUnstack = folder.split("/");
-		var fileUnstack = fileName.split("/");
-		while (fileUnstack[0] == "..") {
-			fileUnstack.shift();
-			folderUnstack.pop();
-		}
+	function readTileset(tilesetObj:DynamicAccess<Dynamic>) : TTileset {
+		var tile = source2TileResolver(tilesetObj.get("image"));
 
-		folder = folderUnstack.length > 0 ? folderUnstack.join("/") + "/" : "";
-		fileName = fileUnstack.join("/");
-
-		var file = try hxd.Res.load(folder+fileName)
-			catch(e:Dynamic) throw "File not found "+fileName;
-
-		var xml = new haxe.xml.Access( Xml.parse(file.entry.getText()) ).node.tileset;
-		var tile = hxd.Res.load(file.entry.directory + "/" +xml.node.image.att.source).toTile();
-
-		var e = new TTileset(xml.att.name, tile, Std.parseInt(xml.att.tilewidth), Std.parseInt(xml.att.tileheight), baseIdx);
+		var e = new TTileset(tilesetObj.get("name"), tile, tilesetObj.get("tilewidth"), tilesetObj.get("tileheight"), tilesetObj.get("firstgid"), tilesetObj.get("margin"), tilesetObj.get("spacing"));
 		return e;
+	}
+
+	private function removeLeadingSlash(path: String): String {
+		if(path.indexOf("/") == 0){
+	    	return path.substring(1, path.length);
+		}
+		return path;
 	}
 
 	public function setProp(name, v) {

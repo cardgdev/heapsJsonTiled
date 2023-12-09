@@ -1,8 +1,9 @@
 -cp src
 -cp test/src
+
 -lib heaps
 -lib hlsdl
--lib heapsTiled
+
 -main Test
 
 -D resourcesPath=test/res

@@ -1,25 +1,34 @@
 # About
 
-A simple lib to import Tiled maps to Heaps projects. It only supports basic stuff, and it's not meant to support 100% of all Tiled features. You can extend it quite easily :)
+This is a fork of https://github.com/deepnight/heapsTiled to use the JSON format of Tiled maps. Also fixes some bugs in the original repo. 
 
-# Usage
+A new callback argument has been added to the TMap class to map tileset image sources to Tiles programmatically. This way, paths to images do not have to be baked into the map files and do not have to be ad-hoc loaded by the map. All of these changes also means that *entire maps can be defined in a single file* which can be easily be loaded between Tiles and heaps, simplifying the resource layout.
 
-See Test.hx
+Very simple example:
 
-# Folder structure
+```haxe
 
-```bash
-│   Test.hx
-│
-└───tiled
-    │   TMap.hx
-    │
-    └───com
-            TLayer.hx
-            TObject.hx
-            TTileset.hx
+    public function tiledFile2Object(tmxRes:hxd.res.Resource): h2d.Object {
+        var map = new tiled.TMap(tmxRes, (src) -> {
+		
+            if(src.contains("my_tileset.png")){
+                return Res.my_tileset.toTile();
+            }
+			
+			return Res.fallbacktiles.toTile();
+			
+        });
+
+        var wrapper = new h2d.Object();
+
+		// Render map
+		for(l in map.layers){
+            map.renderLayerBitmap(l, wrapper);
+        }
+		
+        return wrapper;
+    }
+
+
+
 ```
-
-# Credit
-
-"Caves of Gallet" tileset by Adam Saltsman: https://adamatomic.itch.io/caves-of-gallet
