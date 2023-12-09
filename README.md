@@ -28,7 +28,4 @@ public function tiledFile2Object(tmxRes:hxd.res.Resource): h2d.Object {
 		
 	return wrapper;
 }
-
-
-
 ```
